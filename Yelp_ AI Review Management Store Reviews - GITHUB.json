@@ -1,0 +1,279 @@
+{
+  "name": "Yelp: AI Review Management Store Reviews",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d8c0e762-32fe-410f-b8fb-52d7812d56c3",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "simple": false,
+        "filters": {
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ba0c59ff-4036-4419-810a-68ae9273c300",
+      "name": "Retrieve New Yelp Reviews"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5",
+          "mode": "list",
+          "cachedResultName": "GPT-5"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are the AI Review Assistant for Example Restaurant.\n\nYour responsibility is to analyze Yelp review notification emails, extract structured information, and generate a professional response on behalf of the restaurant.\n\n## Brand Profile\n\nBrand Name:\nExample Restaurant\n\nBrand Voice:\nFriendly, warm, conversational, and professional.\n\nWriting Style:\n- Sound natural and human.\n- Keep responses between 50 and 120 words.\n- Mention at least one specific detail from the customer's review.\n- Never sound robotic.\n- Never copy the customer's review verbatim.\n- Never argue with customers.\n- Never blame the customer.\n- Never promise refunds, compensation, or actions that are not explicitly mentioned.\n- Never invent information.\n- Do not use em dashes (—). Use commas, periods, or parentheses instead.\n\nResponse Guidelines\n\n★★★★★\n- Thank the customer.\n- Mention something they enjoyed.\n- Invite them back.\n\n★★★★☆\n- Thank the customer.\n- Acknowledge any suggestion.\n- Invite another visit.\n\n★★★☆☆\n- Thank the customer.\n- Apologize if appropriate.\n- Acknowledge the concern.\n- Encourage another visit.\n\n★★☆☆☆\n- Apologize sincerely.\n- Show empathy.\n- Address the concern professionally.\n- Encourage the customer to contact the restaurant.\n\n★☆☆☆☆\n- Apologize sincerely.\n- Show empathy.\n- Encourage the customer to contact the restaurant.\n- Protect the restaurant's reputation.\n- Never argue.\n\nReturn ONLY valid JSON.\n\nDo not include markdown.\nDo not wrap the JSON inside code blocks.\n\nAnalyze the following Yelp review notification email.\n\nExtract:\n\n- Review_ID\n- Restaurant\n- Customer\n- Rating\n- Review\n\nGenerate:\n\n- AI_Response\n- Status\n- Created\n\nStatus must always be:\n\nPending Approval\n\nCreated should be in ISO 8601 format.\n\nEmail Subject:\n{{ $json.subject }}\n\nEmail Body:\n{{ $json.html }}\n\nFrom:\n{{ $json.from.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "ac488111-91b5-422d-b496-cd77fe846a67",
+      "name": "Generate AI Review Response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => {\n  const raw = item.json.output[0].content[0].text;\n\n  return {\n    json: JSON.parse(raw)\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        0
+      ],
+      "id": "8d5351e2-42aa-4e19-a005-aab5d5ca9781",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Review Management Database"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Reviews"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Review ID": "={{ $json.Review_ID }}",
+            "Restaurant": "={{ $json.Restaurant }}",
+            "Customer": "={{ $json.Customer }}",
+            "Rating": "={{ $json.Rating }}",
+            "Review": "={{ $json.Review }}",
+            "AI Response": "={{ $json.AI_Response }}",
+            "Status": "={{ $json.Status }}",
+            "Created": "={{ $json.Created }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Review ID",
+              "displayName": "Review ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Restaurant",
+              "displayName": "Restaurant",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer",
+              "displayName": "Customer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Rating",
+              "displayName": "Rating",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Review",
+              "displayName": "Review",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Response",
+              "displayName": "AI Response",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Created",
+              "displayName": "Created",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        976,
+        0
+      ],
+      "id": "21178a7f-a1cc-4789-90a5-9814ee99ac48",
+      "name": "Store Review Queue or Save to Review Database"
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $('Retrieve New Yelp Reviews').item.json.threadId }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "6c8db4d7-fcb3-43a1-8240-c279c83240d6",
+      "name": "Mark Emails as Read"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Retrieve New Yelp Reviews",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve New Yelp Reviews": {
+      "main": [
+        [
+          {
+            "node": "Generate AI Review Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate AI Review Response": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Store Review Queue or Save to Review Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Review Queue or Save to Review Database": {
+      "main": [
+        [
+          {
+            "node": "Mark Emails as Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "nodeGroups": [],
+  "tags": []
+}
